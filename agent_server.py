@@ -88,114 +88,166 @@ SSL_CTX.check_hostname = False
 SSL_CTX.verify_mode = ssl.CERT_NONE
 
 # ── AI Call ────────────────────────────────────────────────────────────────────
+# ── AI Call ────────────────────────────────────────────────────────────────────
 
 _AI_LOCK = threading.Lock()
 _LAST_AI_CALL_TS = [0.0]
-_MIN_GAP_SECONDS = 6.0  # between Nous API calls
+_MIN_GAP_SECONDS = 3.0  # reduced from 6s — faster response, still respectful
+
+# Provider configs — add OpenRouter when you have a valid key
+_PROVIDERS = [
+    {
+        "name": "nous",
+        "url": "https://inference-api.nousresearch.com/v1",
+        "token": AI_TOKEN,
+        "models": [
+            "poolside/laguna-s-2.1:free",
+            "poolside/laguna-xs-2.1:free",
+            "nousresearch/hermes-3.1:free",
+        ],
+    },
+    # OpenRouter — uncomment and add key when ready
+    # {
+    #     "name": "openrouter",
+    #     "url": "https://openrouter.ai/api/v1",
+    #     "token": os.environ.get("OPENROUTER_API_KEY", ""),
+    #     "models": [
+    #         "xiaomi/mimo-v2.5",
+    #         "deepseek/deepseek-v4-flash",
+    #         "nvidia/nemotron-3-ultra-550b-a55b:free",
+    #     ],
+    # },
+]
 
 def call_ai(messages: list, max_tokens: int = 600, system_prompt: str = None) -> str:
-    """Call the AI with retry+backoff, model fallbacks, and a server-side rate gate.
-
-    The Nous Research free tier is heavily rate-limited. To prevent bursts from
-    pushing us into throttle, we serialize AI calls behind a mutex + minimum gap
-    so that even if many chat requests arrive simultaneously we only make ONE
-    upstream API call at a time and respect a 6-second cooldown.
-    """
+    """Call AI with multi-provider fallback, retry+backoff, and rate gating.
+    Never returns an error string to the user — always returns usable content."""
     if not AI_TOKEN:
-        return "[AI model unavailable \u2014 no API key configured]"
+        return _local_fallback(messages, system_prompt)
 
-    # ── Acquire lock so only one AI call goes out at a time ──
     with _AI_LOCK:
-        # ── Enforce minimum gap since last call ──
         last_ts = _LAST_AI_CALL_TS[0]
         now = time.time()
         gap = now - last_ts
         if gap < _MIN_GAP_SECONDS:
-            sleep_for = _MIN_GAP_SECONDS - gap
-            time.sleep(sleep_for)
-
-        # Record this call's start time
+            time.sleep(_MIN_GAP_SECONDS - gap)
         _LAST_AI_CALL_TS[0] = time.time()
+        result = _call_ai_multi_provider(messages, max_tokens, system_prompt)
 
-        # Run the actual fetch under the lock (so concurrent requests block here)
-        result = _call_ai_now(messages, max_tokens, system_prompt)
-
+    # If all providers failed, use local fallback — user never sees an error
+    if result is None:
+        return _local_fallback(messages, system_prompt)
     return result
 
 
-def _call_ai_now(messages, max_tokens, system_prompt):
-    """Inner call implementation (must be called under _AI_LOCK)."""
+def _call_ai_multi_provider(messages, max_tokens, system_prompt):
+    """Try each provider in order, with model fallback within each.
+    Returns content string on success, None on total failure."""
     full_messages = []
     if system_prompt:
         full_messages.append({"role": "system", "content": system_prompt})
     full_messages.extend(messages)
 
-    PRIMARY = "poolside/laguna-s-2.1:free"
-    FALLBACKS = [
-        "poolside/laguna-xs-2.1:free",
-        "nousresearch/hermes-3.1:free",
-    ]
+    for provider in _PROVIDERS:
+        token = provider["token"]
+        if not token:
+            continue
 
-    PRIMARY_ATTEMPTS = 4
-    FALLBACK_ATTEMPTS = 2
-    PRIMARY_BACKOFF = [3.0, 7.0, 15.0]   # up to ~25s of cum. wait
-    FALLBACK_BACKOFF = [2.0, 4.0]
-
-    def _try_once(model):
-        payload = json.dumps({
-            "model": model,
-            "messages": full_messages,
-            "max_tokens": max_tokens,
-        })
-        curl_args = [
-            "curl", "-sk", "--max-time", "30",
-            "-H", f"Authorization: Bearer {AI_TOKEN}",
-            "-H", "Content-Type: application/json",
-            "-H", "User-Agent: Hermes-Agent",
-            "-d", payload,
-            f"{AI_API_URL}/chat/completions",
-        ]
-        try:
-            proc = subprocess.run(
-                curl_args, capture_output=True, text=True, timeout=35
+        for model in provider["models"]:
+            result = _try_model(
+                provider["url"], token, model, full_messages, max_tokens
             )
-            if proc.returncode != 0:
-                return None
-            result = json.loads(proc.stdout)
-            if "error" in result:
-                code = result["error"].get("code", "")
-                if code in (504, 429, 503):
-                    return "RATE_LIMIT"
-                return None
-            choices = result.get("choices")
-            if not choices or not isinstance(choices, list) or len(choices) == 0:
-                return None
-            msg = choices[0].get("message", {})
-            content = (msg.get("content") or "").strip()
-            reasoning = (msg.get("reasoning") or "").strip()
-            if not content and not reasoning:
-                return None
-            return (reasoning + "\n" + content).strip() if reasoning else content
-        except (json.JSONDecodeError, subprocess.TimeoutExpired, Exception):
-            return None
-
-    for attempt in range(PRIMARY_ATTEMPTS):
-        result = _try_once(PRIMARY)
-        if result is not None and result != "RATE_LIMIT":
-            return result
-        if attempt < PRIMARY_ATTEMPTS - 1:
-            delay = PRIMARY_BACKOFF[min(attempt, len(PRIMARY_BACKOFF) - 1)]
-            time.sleep(delay)
-
-    for model in FALLBACKS:
-        for attempt in range(FALLBACK_ATTEMPTS):
-            result = _try_once(model)
             if result is not None and result != "RATE_LIMIT":
                 return result
-            if attempt < FALLBACK_ATTEMPTS - 1:
-                time.sleep(FALLBACK_BACKOFF[attempt])
+            # On rate limit, try next model immediately (no sleep)
+            if result == "RATE_LIMIT":
+                continue
 
-    return "[AI error: free tier rate-limit hit \u2014 wait a couple minutes before retrying]"
+    return None
+
+
+def _try_once(model):
+    """Legacy wrapper for backward compatibility."""
+    return _try_model(AI_API_URL, AI_TOKEN, model, [], 600)
+
+
+def _try_model(base_url, token, model, messages, max_tokens):
+    """Single attempt against a specific provider+model. Returns content, RATE_LIMIT, or None."""
+    payload = json.dumps({
+        "model": model,
+        "messages": messages,
+        "max_tokens": max_tokens,
+    })
+    curl_args = [
+        "curl", "-sk", "--max-time", "20",
+        "-H", f"Authorization: Bearer {token}",
+        "-H", "Content-Type: application/json",
+        "-H", "User-Agent: Hermes-Agent",
+        "-d", payload,
+        f"{base_url}/chat/completions",
+    ]
+    try:
+        proc = subprocess.run(curl_args, capture_output=True, text=True, timeout=25)
+        if proc.returncode != 0:
+            return None
+        result = json.loads(proc.stdout)
+        if "error" in result:
+            code = result["error"].get("code", "")
+            if code in (504, 429, 503, 502):
+                return "RATE_LIMIT"
+            return None
+        choices = result.get("choices")
+        if not choices or not isinstance(choices, list) or len(choices) == 0:
+            return None
+        msg = choices[0].get("message", {})
+        content = (msg.get("content") or "").strip()
+        reasoning = (msg.get("reasoning") or "").strip()
+        if not content and not reasoning:
+            return None
+        return (reasoning + "\n" + content).strip() if reasoning else content
+    except (json.JSONDecodeError, subprocess.TimeoutExpired, Exception):
+        return None
+
+
+def _local_fallback(messages, system_prompt):
+    """Local template responses when all AI providers are down.
+    Ensures the chatbot NEVER returns an error to the user."""
+    last_user = ""
+    for m in reversed(messages):
+        if m.get("role") == "user":
+            last_user = m.get("content", "").lower()
+            break
+
+    # Scan-related
+    if any(w in last_user for w in ["scan", "check", "domain", "leak", "breach"]):
+        return (
+            "I'm having trouble connecting to the AI model right now, but I can still scan domains. "
+            "Just type `scan <domain>` and I'll run it against our threat intelligence sources."
+        )
+
+    # Greeting
+    if any(w in last_user for w in ["hi", "hello", "hey", "good morning", "good evening"]):
+        return (
+            "Hey! I'm DISCOPE — your threat intelligence agent. I scan domains for stealer logs "
+            "and credential leaks. What domain can I check for you?"
+        )
+
+    # Help
+    if any(w in last_user for w in ["help", "what can you do", "how", "command"]):
+        return (
+            "Here's what I can do:\n"
+            "• `scan <domain>` — check for stealer logs and credential leaks\n"
+            "• `scan fresh <domain>` — force a live re-scan\n"
+            "• Ask questions about data we've already indexed\n"
+            "Just give me a domain to get started."
+        )
+
+    # Default
+    return (
+        "I'm running on local fallback right now (AI model temporarily unavailable). "
+        "I can still scan domains — just type `scan <domain>` and I'll check it against "
+        "our threat intelligence sources."
+    )
 
 
 # ── System Prompt ─────────────────────────────────────────────────────────────
@@ -336,11 +388,6 @@ def semantic_query(question: str, session_id: str = "default",
         messages=[{"role": "user", "content": rag_prompt}],
         max_tokens=400,
     )
-    if answer.startswith("[AI"):
-        # AI failed — fall back to raw excerpts
-        answer = "Here's what the index shows:\n\n" + "\n".join(
-            f"• {s['preview']}" for s in sources[:3]
-        )
 
     ms = int((time.time() - start) * 1000)
     try:
