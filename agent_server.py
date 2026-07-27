@@ -94,8 +94,18 @@ _AI_LOCK = threading.Lock()
 _LAST_AI_CALL_TS = [0.0]
 _MIN_GAP_SECONDS = 3.0  # reduced from 6s — faster response, still respectful
 
-# Provider configs — add OpenRouter when you have a valid key
+# Provider configs — OpenRouter primary, Nous fallback
 _PROVIDERS = [
+    {
+        "name": "openrouter",
+        "url": "https://openrouter.ai/api/v1",
+        "token": os.environ.get("OPENROUTER_API_KEY", ""),
+        "models": [
+            "xiaomi/mimo-v2.5",
+            "deepseek/deepseek-v4-flash",
+            "nvidia/nemotron-3-ultra-550b-a55b:free",
+        ],
+    },
     {
         "name": "nous",
         "url": "https://inference-api.nousresearch.com/v1",
@@ -106,17 +116,6 @@ _PROVIDERS = [
             "nousresearch/hermes-3.1:free",
         ],
     },
-    # OpenRouter — uncomment and add key when ready
-    # {
-    #     "name": "openrouter",
-    #     "url": "https://openrouter.ai/api/v1",
-    #     "token": os.environ.get("OPENROUTER_API_KEY", ""),
-    #     "models": [
-    #         "xiaomi/mimo-v2.5",
-    #         "deepseek/deepseek-v4-flash",
-    #         "nvidia/nemotron-3-ultra-550b-a55b:free",
-    #     ],
-    # },
 ]
 
 def call_ai(messages: list, max_tokens: int = 600, system_prompt: str = None) -> str:
@@ -155,7 +154,8 @@ def _call_ai_multi_provider(messages, max_tokens, system_prompt):
 
         for model in provider["models"]:
             result = _try_model(
-                provider["url"], token, model, full_messages, max_tokens
+                provider["url"], token, model, full_messages, max_tokens,
+                provider_name=provider["name"],
             )
             if result is not None and result != "RATE_LIMIT":
                 return result
@@ -171,18 +171,26 @@ def _try_once(model):
     return _try_model(AI_API_URL, AI_TOKEN, model, [], 600)
 
 
-def _try_model(base_url, token, model, messages, max_tokens):
+def _try_model(base_url, token, model, messages, max_tokens, provider_name=""):
     """Single attempt against a specific provider+model. Returns content, RATE_LIMIT, or None."""
     payload = json.dumps({
         "model": model,
         "messages": messages,
         "max_tokens": max_tokens,
     })
-    curl_args = [
-        "curl", "-sk", "--max-time", "20",
+    headers = [
         "-H", f"Authorization: Bearer {token}",
         "-H", "Content-Type: application/json",
         "-H", "User-Agent: Hermes-Agent",
+    ]
+    # OpenRouter requires referer header
+    if "openrouter" in base_url:
+        headers.extend(["-H", "HTTP-Referer: https://discope.local"])
+        headers.extend(["-H", "X-Title: DISCOPE"])
+
+    curl_args = [
+        "curl", "-sk", "--max-time", "20",
+    ] + headers + [
         "-d", payload,
         f"{base_url}/chat/completions",
     ]
@@ -202,9 +210,12 @@ def _try_model(base_url, token, model, messages, max_tokens):
         msg = choices[0].get("message", {})
         content = (msg.get("content") or "").strip()
         reasoning = (msg.get("reasoning") or "").strip()
-        if not content and not reasoning:
-            return None
-        return (reasoning + "\n" + content).strip() if reasoning else content
+        # Prefer content over reasoning — reasoning is the model's internal monologue
+        if content:
+            return content
+        if reasoning:
+            return reasoning
+        return None
     except (json.JSONDecodeError, subprocess.TimeoutExpired, Exception):
         return None
 
