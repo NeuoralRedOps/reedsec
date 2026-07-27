@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cybersecurity Professional - Reedsec</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* Full Hacker Theme */
+    body {
+      font-family: 'Courier New', monospace;
+      background: #1a0029; /* Deep purple */
+      color: #00ff00; /* Neon green */
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      color: #00ff00; /* Neon green */
+      text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 20px #00ff00;
+    }
+
+    a {
+      color: #00ff00;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    a:hover {
+      text-decoration: underline;
+      color: #ff00ff; /* Purple */
+    }
+
+    p {
+      line-height: 1.6;
+    }
+
+    /* Hero Section */
+    .hero-section {
+      text-align: center;
+      padding: 100px 20px;
+    }
+
+    .hero-title {
+      font-size: 3rem;
+      margin-bottom: 20px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 20px #00ff00;
+      }
+      50% {
+        text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00, 0 0 30px #00ff00, 0 0 40px #00ff00;
+      }
+      100% {
+        text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 20px #00ff00;
+      }
+    }
+
+    .hero-tagline {
+      font-size: 1.2rem;
+      margin-bottom: 40px;
+      max-width: 800px; /* Limit width for better alignment */
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    @media (max-width: 768px) {
+      .hero-title {
+        font-size: 2rem;
+      }
+
+      .hero-tagline {
+        font-size: 1rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hero-title {
+        font-size: 1.5rem;
+      }
+
+      .hero-tagline {
+        font-size: 0.9rem;
+      }
+    }
+
+    /* Service Items */
+    .service-item {
+      text-align: center;
+      margin-bottom: 20px;
+      transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    .service-item:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 20px #00ff00, 0 0 40px #00ff00;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    /* Blog Links */
+    .blog-links {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .blog-links a {
+      color: #00ff00;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .blog-links a:hover {
+      text-decoration: underline;
+      color: #ff00ff;
+    }
+
+    /* Custom Grid Layout */
+    .custom-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .custom-grid-item {
+      background: rgba(0, 0, 0, 0, 0.2);
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    }
+
+    .custom-grid-item:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 20px #00ff00, 0 0 40px #00ff00;
+    }
+
+    /* Background Gradient Animation */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      background: linear-gradient(270deg, #1a0029, #000000, #1a0029);
+      background-size: 600% 600%;
+      animation: gradient 15s ease infinite;
+    }
+
+    @keyframes gradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Adjustments for Whoami and Areas of Expertise */
+    .about-section {
+      margin-top: -50px; /* Adjust Whoami section to be higher */
+    }
+
+    .services-section {
+      margin-top: 50px; /* Adjust Areas of Expertise section to be lower */
+    }
+
+    /* Game Container */
+    .game-container {
+      text-align: center;
+      opacity: 1;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .game-message {
+      margin-bottom: 20px;
+    }
+
+    .command-input-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    #commandInput {
+      width: 200px;
+      padding: 5px;
+      font-family: 'Courier New', monospace;
+      background-color: #000;
+      color: #0f0;
+      border: 1px solid #0f0;
+      text-align: center;
+      margin-right: 10px;
+    }
+
+    button {
+      padding: 5px 10px;
+      font-family: 'Courier New', monospace;
+      background-color: #0f0;
+      color: #000;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #00ff00;
+    }
+
+    #result {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer" class="game-container">
+    <div class="game-message">Type the secret command to gain access:</div>
+    <div class="command-input-container">
+      <input type="text" id="commandInput" placeholder="Enter command">
+      <button onclick="checkCommand()">Submit</button>
+    </div>
+    <div id="result"></div>
+  </div>
+
+  <div id="content" style="display: none;">
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="container">
+        <h1 class="hero-title">Secure Your Digital Future</h1>
+        <p class="hero-tagline">Expert cybersecurity professional with over 5 years of experience protecting businesses from digital threats.</p>
+      </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about-section">
+      <div class="container">
+        <h2 id="whoami" class="text-center">Whoami</h2>
+        <p id="whoami-text" class="text-center">
+          I'm Akshay, also known as Reedsec, a seasoned cybersecurity professional with over five years of hands-on experience in securing digital assets against ever-evolving cyber threats. My expertise lies in Vulnerability Assessment and Penetration Testing (VAPT), security audits, and cybersecurity training. I specialize in identifying and mitigating security vulnerabilities, ensuring compliance with industry standards, and empowering organizations with robust security frameworks. Through continuous research, hands-on assessments, and knowledge sharing, I am committed to strengthening cybersecurity resilience in an increasingly complex digital landscape.
+        </p>
+      </div>
+    </section>
+
+    <!-- Services Section -->
+    <section class="services-section">
+      <div class="container">
+        <h2 id="expertise" class="text-center mb-4">Areas of Expertise</h2>
+        <div class="custom-grid">
+          <div class="custom-grid-item">
+            <h5>Network Security</h5>
+            <p>Protect your infrastructure.</p>
+          </div>
+          <div class="custom-grid-item">
+            <h5>Cloud Security</h5>
+            <p>Secure cloud systems.</p>
+          </div>
+          <div class="custom-grid-item">
+            <h5>Vulnerability Assessment</h5>
+            <p>Identify weaknesses.</p>
+          </div>
+          <div class="custom-grid-item">
+            <h5>Vulnerability Management</h5>
+            <p>Mitigate risks.</p>
+          </div>
+          <div class="custom-grid-item">
+            <h5>Black Box Testing</h5>
+            <p>Simulate attacks.</p>
+          </div>
+          <div class="custom-grid-item">
+            <h5>White Box Testing</h5>
+            <p>Deep analysis.</p>
+          </div>
+          <div class="custom-grid-item">
+            <h5>Threat Intelligence</h5>
+            <p>Hunt threats.</p>
+          </div>
+          <div class="custom-grid-item">
+            <h5>Security Consulting</h5>
+            <p>Custom strategies.</p>
+          </div>
+          <div class="custom-grid-item">
+            <h5>ATM Security</h5>
+            <p>ATM testing.</p>
+          </div>
+          <div class="custom-grid-item">
+            <h5>Container Security</h5>
+            <p>Secure containers.</p>
+          </div>
+          <div class="custom-grid-item">
+            <h5>Application Security</h5>
+            <p>Protect apps.</p>
+          </div>
+          <div class="custom-grid-item">
+            <h5>Security Audits</h5>
+            <p>Ensure compliance.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Blogs Section -->
+    <section class="blogs-section">
+      <div class="container">
+        <h2 class="text-center">Blogs</h2>
+        <div class="blog-links">
+          <a href="https://medium.com/@Readsec" target="_blank">Medium</a>
+          <a href="https://www.linkedin.com/in/akshaykumar70129" target="_blank">LinkedIn</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <div class="container">
+        <p>&copy; 2025 Reedsec</p>
+        <div>
+          <a href="mailto:akp70129@gmail.com">Email Me</a> |
+          <a href="https://signal.me/#p/@Reedsec" target="_blank">Signal: @Reedsec</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const gameContainer = document.getElementById('gameContainer');
+    const commandInput = document.getElementById('commandInput');
+    const resultDiv = document.getElementById('result');
+    const content = document.getElementById('content');
+
+    const constf = 'getelementbyid';
+
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    function checkCommand() {
+      const constid = commandInput.value.trim().toLowerCase();
+      resultDiv.textContent = '';
+
+      if (constid === constf) {
+        resultDiv.textContent = 'Access Granted!';
+        gameContainer.style.display = 'none';
+        content.style.display = 'block';
+      } else {
+        attempts++;
+        resultDiv.textContent = 'Access Denied! Try again.';
+
+        if (attempts >= maxAttempts) {
+          commandInput.disabled = true;
+          resultDiv.textContent += ' You have reached the maximum number of attempts.';
+        }
+      }
+    }
+  </script>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
