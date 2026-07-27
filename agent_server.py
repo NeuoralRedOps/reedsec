@@ -31,6 +31,7 @@ sys.path.insert(0, SCRIPTS_DIR)
 from disma_core.engine import DISMAEngine
 from disma_core.base_source import StealerLogRecord
 from disma_core.semantic import SemanticStore
+from disma_core.mitre_mapper import generate_mitre_report
 
 PORT = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[1] == "--port" else 8080
 
@@ -878,6 +879,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 status_text = "Warning"
                 status_state = ""
 
+            # Generate MITRE mapping report
+            mitre_report = None
+            if total_count > 0:
+                try:
+                    # Convert records to dicts for MITRE mapper
+                    finding_dicts = []
+                    for rec in records[:50]:  # Limit to 50 for performance
+                        finding_dicts.append({
+                            "record_type": rec.record_type if hasattr(rec, 'record_type') else rec.get("record_type", "credential_leak"),
+                            "severity": rec.severity if hasattr(rec, 'severity') else rec.get("severity", "info"),
+                            "domain": domain,
+                        })
+                    mitre_report = generate_mitre_report(domain, finding_dicts)
+                except Exception as e:
+                    logger.warning(f"MITRE mapping failed: {e}")
+
             response_data = {
                 "status": "ok",
                 "response": final,
@@ -887,6 +904,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "status_text": status_text,
                 "status_state": status_state,
             }
+
+            if mitre_report:
+                response_data["mitre"] = mitre_report.get("mitre")
 
             if preview_records or has_raw_results or total_count > 0:
                 response_data["preview_records"] = preview_records
