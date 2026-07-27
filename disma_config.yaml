@@ -1,0 +1,104 @@
+# DISMA Configuration — Data Sources & Storage
+# =============================================
+# Add new data sources here. Each source has:
+#   - type: scraper | api | bot | webhook | database | custom
+#   - enabled: true | false
+#   - Source-specific settings (api_key, endpoint, interval, etc.)
+
+# ── Storage ──────────────────────────────────────────────────────
+storage:
+  engine: sqlite          # sqlite | (future: postgres, duckdb)
+  path: "disma_data/stealer_logs.db"
+  max_connections: 8
+  cache_size_mb: 80
+  wal_mode: true
+
+# ── Data Sources ─────────────────────────────────────────────────
+sources:
+  # ── Pastebin Scraper ──────────────────────────────────────────
+  pastebinsource:
+    type: scraper
+    enabled: true
+    rate_limit_delay: 2        # Seconds between requests
+    timeout: 15
+    max_results: 100
+
+  # ── CRT.sh (Certificate Transparency) ────────────────────────
+  crtshsource:
+    type: api
+    enabled: true
+    endpoint: "https://crt.sh"
+    timeout: 30
+    max_results: 500
+
+  # ── Ahmia (.onion search) ─────────────────────────────────────
+  ahmiasource:
+    type: scraper
+    enabled: true
+    onion_endpoint: ""         # Optional: local Tor proxy
+    timeout: 30
+    max_results: 100
+    notes: "Requires Tor running locally for .onion access"
+
+  # ── Telegram Bot ──────────────────────────────────────────────
+  telegramsource:
+    type: bot
+    enabled: false             # Set to true and configure below
+    # ── Configuration ─────────────────────────────────────────
+    # Get these from @BotFather on Telegram
+    bot_token: ""              # Your Telegram bot token
+    chat_ids: []               # List of chat IDs to monitor
+    # ── OR use Telegram API directly ──────────────────────────
+    api_id: ""                 # my.telegram.org app ID
+    api_hash: ""               # my.telegram.org app hash
+    phone: ""                  # Phone number for user bot
+    session_file: "disma_data/telegram_session"
+    monitor_interval_minutes: 15
+    keywords: ["stealer", "log", "combo", "leak", "dump", "credential"]
+    max_history_messages: 1000
+
+  # ── @TTMlogsBot Telegram Bridge (User Login) ───────────────────
+  ttmlogs:
+    type: bot
+    enabled: true             # Set to true once configured
+    api_id: ""                # Set TG_API_ID env var instead
+    api_hash: ""              # Set TG_API_HASH env var instead
+    phone: ""                 # Set TG_PHONE env var instead
+
+  customapisource:
+    type: api
+    enabled: false
+    name: "My Custom Source"
+    endpoint: ""               # Your API endpoint
+    api_key: ""                # Your API key
+    api_header: "Authorization"
+    api_header_format: "Bearer {}"
+    method: "GET"              # GET or POST
+    response_path: "data"      # JSONPath to records array
+    timeout: 30
+    max_results: 500
+    # Custom field mapping (API response field → StealerLogRecord field)
+    field_mapping:
+      domain: "domain"
+      content: "content"
+      type: "type"
+      severity: "severity"
+      url: "url"
+      timestamp: "timestamp"
+
+  # ── Webhook Receiver ──────────────────────────────────────────
+  # External services can POST data here
+  webhooksource:
+    type: webhook
+    enabled: false
+    listen_port: 9090
+    listen_path: "/webhook"
+    api_key: ""                # Shared secret for webhook auth
+    batch_size: 1000
+
+# ── Logging ──────────────────────────────────────────────────────
+logging:
+  level: INFO                  # DEBUG | INFO | WARNING | ERROR
+  file: "disma_data/disma.log"
+  max_size_mb: 100
+  backup_count: 5

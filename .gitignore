@@ -1,0 +1,35 @@
+# ── Secrets & Credentials ──
+*.session
+*.session-journal
+auth_string.txt
+code_hash.json
+.env
+.env.*
+!.env.example
+
+# ── Data & Runtime ──
+disma_data/
+sessions/
+downloads/
+stealer_log_state/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ── Temp / Test ──
+_test_*.py
+_shot_helper.html
+_ui_shot*.png
+_new_call_ai*.py
+
+# ── OS ──
+Thumbs.db
+.DS_Store
