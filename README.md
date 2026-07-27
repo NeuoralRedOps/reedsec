@@ -22,11 +22,17 @@ pip install sentence-transformers telethon
 export TG_API_ID="your_telegram_api_id"
 export TG_API_HASH="your_telegram_api_hash"
 export TG_PHONE="your_phone_number"
+export OPENROUTER_API_KEY="your_openrouter_key"
 export NOUS_API_KEY="your_nous_api_key"  # or use ~/AppData/Local/hermes/auth.json
 
 # 3. Run
 python agent_server.py --port 8080
 ```
+
+**Required env vars for full functionality:**
+- `TG_API_ID` + `TG_API_HASH` — Telegram bridge (stealer log downloads)
+- `OPENROUTER_API_KEY` — Primary AI models (MiMo V2.5, DeepSeek V4, Nemotron 3)
+- `NOUS_API_KEY` — Fallback AI models (or use auth.json)
 
 Open **http://localhost:8080** in your browser.
 
