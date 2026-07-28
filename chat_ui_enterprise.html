@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DISCOPE — Agent Platform</title>
+<style>
+  :root{
+    --bg:#0a0d0b; --bg2:#0f1311; --panel:#111613; --panel2:#141a16;
+    --border:#1e2620; --border2:#2a352c;
+    --txt:#e6efe9; --muted:#7d8a80; --muted2:#5a655c;
+    --green:#00e5a0; --green-d:#00b884; --green-glow:rgba(0,229,160,.15);
+    --red:#ff4d5e; --orange:#ff9f43; --blue:#3aa0ff;
+    --r:14px; --r-sm:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg); color:var(--txt); overflow:hidden;
+    background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.025) 1px, transparent 0);
+    background-size:22px 22px;
+  }
+  .app{display:grid; grid-template-columns:248px 1fr; height:100vh}
+
+  /* ── Sidebar ── */
+  .sidebar{
+    background:linear-gradient(180deg,var(--bg2),var(--bg));
+    border-right:1px solid var(--border);
+    display:flex; flex-direction:column; padding:20px 16px; gap:6px;
+  }
+  .logo{display:flex; align-items:center; gap:11px; padding:4px 6px 18px}
+  .logo .sq{width:34px;height:34px;border-radius:9px;background:var(--green);
+    display:grid;place-items:center;color:#04130d;font-weight:800;font-size:19px;
+    box-shadow:0 0 18px var(--green-glow)}
+  .logo .name{font-weight:700;font-size:15px;letter-spacing:.3px}
+  .logo .sub{font-size:9.5px;color:var(--muted);letter-spacing:1.6px;font-weight:600}
+  .nav-h{font-size:10px;letter-spacing:1.5px;color:var(--muted2);font-weight:700;
+    margin:14px 8px 4px;text-transform:uppercase}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:var(--r-sm);
+    color:var(--muted);cursor:pointer;font-size:13.5px;font-weight:500;transition:.15s;
+    border:1px solid transparent}
+  .nav-item:hover{background:var(--panel);color:var(--txt)}
+  .nav-item.active{background:var(--panel2);color:var(--txt);border-color:var(--border2)}
+  .nav-item.active .ic{color:var(--green)}
+  .nav-item .ic{width:18px;text-align:center;font-size:15px;color:var(--muted2)}
+  .nav-item .badge{margin-left:auto;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;
+    background:var(--green-glow);color:var(--green);letter-spacing:.5px}
+  .recent{margin-top:8px}
+  .recent-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-sm);
+    cursor:pointer;font-size:12.5px;color:var(--muted);transition:.15s}
+  .recent-item:hover{background:var(--panel);color:var(--txt)}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .dot.g{background:var(--green)} .dot.o{background:var(--orange)}
+  .recent-item .dom{font-weight:600;color:var(--txt);font-size:12.5px}
+  .recent-item .tm{margin-left:auto;font-size:10.5px;color:var(--muted2)}
+  .recent-item .cnt{background:var(--orange);color:#1a0f00;font-size:9px;font-weight:800;
+    padding:1px 6px;border-radius:20px}
+  .view-all{font-size:11px;color:var(--green);padding:8px 10px;cursor:pointer;font-weight:600}
+  .user{margin-top:auto;display:flex;align-items:center;gap:10px;padding:11px;border-radius:var(--r-sm);
+    background:var(--panel);border:1px solid var(--border)}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--border2);display:grid;place-items:center;
+    font-weight:700;font-size:13px;color:var(--muted)}
+  .user .nm{font-size:12.5px;font-weight:600}
+  .user .rl{font-size:9px;color:var(--muted2);letter-spacing:.8px;font-weight:600}
+
+  /* ── Main ── */
+  .main{display:flex;flex-direction:column;overflow:hidden}
+  .topbar{display:flex;align-items:center;gap:14px;padding:16px 26px;border-bottom:1px solid var(--border);
+    background:rgba(10,13,11,.6);backdrop-filter:blur(8px)}
+  .crumbs{font-size:13px;color:var(--muted)}
+  .crumbs b{color:var(--txt)}
+  .spacer{flex:1}
+  .live{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);font-weight:600;
+    padding:7px 13px;border:1px solid var(--border2);border-radius:20px;cursor:pointer}
+  .live .ind{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .clear-btn{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:600;
+    padding:7px 13px;border:1px solid var(--border2);border-radius:20px;cursor:pointer}
+  .clear-btn:hover{color:var(--red);border-color:rgba(255,77,94,.4)}
+
+  .scroll{flex:1;overflow-y:auto;padding:26px}
+  .scroll::-webkit-scrollbar{width:8px}
+  .scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:8px}
+
+  /* Stat cards */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:26px}
+  .stat{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:18px}
+  .stat .lbl{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.4px}
+  .stat .val{font-size:27px;font-weight:800;margin:8px 0 4px;letter-spacing:-.5px}
+  .stat .tr{font-size:11px;font-weight:600}
+  .stat .tr.up{color:var(--green)} .stat .tr.flat{color:var(--muted)}
+
+  /* Hero */
+  .hero{background:linear-gradient(135deg,var(--panel2),var(--panel));border:1px solid var(--border);
+    border-radius:var(--r);padding:30px 32px;margin-bottom:24px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;
+    background:radial-gradient(circle,var(--green-glow),transparent 70%);border-radius:50%}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:1.2px;
+    color:var(--green);background:var(--green-glow);padding:5px 11px;border-radius:20px;margin-bottom:16px}
+  .hero h1{font-size:30px;font-weight:800;line-height:1.18;letter-spacing:-.6px;max-width:560px}
+  .hero h1 .hl{color:var(--green)}
+  .hero p{color:var(--muted);font-size:13.5px;margin-top:12px;max-width:520px;line-height:1.6}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:24px;max-width:620px}
+  .act{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:14px 16px;
+    cursor:pointer;transition:.15s;position:relative}
+  .act:hover{border-color:var(--green);background:var(--panel)}
+  .act .k{font-size:10px;letter-spacing:1px;color:var(--muted2);font-weight:700}
+  .act .v{font-size:14px;font-weight:600;margin-top:5px;color:var(--txt)}
+  .act .go{position:absolute;right:14px;top:14px;color:var(--green);font-size:16px}
+
+  /* Chat */
+  .chat-wrap{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);
+    display:flex;flex-direction:column;height:calc(100vh - 360px);min-height:340px}
+  .chat-head{padding:13px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;
+    display:flex;align-items:center;gap:9px}
+  .chat-head .ic{color:var(--green)}
+  .chat-inner{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+  .chat-inner::-webkit-scrollbar{width:8px}
+  .chat-inner::-webkit-scrollbar-thumb{background:var(--border2);border-radius:8px}
+  .msg{max-width:78%}
+  .msg .meta{font-size:10.5px;color:var(--muted2);margin-bottom:5px;font-weight:600}
+  .msg .meta .r{color:var(--green)}
+  .msg .body{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:13px 15px;
+    font-size:13.5px;line-height:1.6;white-space:pre-wrap;word-wrap:break-word}
+  .msg.user{align-self:flex-end}
+  .msg.user .meta{text-align:right}
+  .msg.user .body{background:var(--green-glow);border-color:rgba(0,229,160,.3)}
+  .welcome{text-align:center;color:var(--muted);padding:40px 20px}
+  .welcome h3{color:var(--txt);font-size:17px;margin-bottom:8px}
+  .typing-dots{display:inline-flex;gap:5px;padding:4px 0}
+  .typing-dots span{width:7px;height:7px;border-radius:50%;background:var(--muted2);
+    animation:bl 1.2s infinite}
+  .typing-dots span:nth-child(2){animation-delay:.2s}
+  .typing-dots span:nth-child(3){animation-delay:.4s}
+  @keyframes bl{0%,60%,100%{opacity:.3}30%{opacity:1}}
+
+  /* Scan card */
+  .scan-card{border:1px solid var(--border2);border-radius:12px;padding:16px;background:var(--bg2)}
+  .scan-card .top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .sev-ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:800;font-size:15px}
+  .sev-ic.high{background:rgba(255,77,94,.15);color:var(--red)}
+  .sev-ic.medium{background:rgba(255,159,67,.15);color:var(--orange)}
+  .sev-ic.low{background:var(--green-glow);color:var(--green)}
+  .scan-card .ttl{font-weight:700;font-size:14px}
+  .scan-card .st{margin-left:auto;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
+  .st.high{background:rgba(255,77,94,.15);color:var(--red)}
+  .st.medium{background:rgba(255,159,67,.15);color:var(--orange)}
+  .st.low{background:var(--green-glow);color:var(--green)}
+  .scan-card .desc{font-size:12.5px;color:var(--muted);line-height:1.55}
+  .creds{margin-top:11px;display:flex;flex-direction:column;gap:5px}
+  .cred{font-size:11.5px;color:var(--muted);font-family:ui-monospace,Menlo,monospace;
+    background:var(--panel);padding:6px 10px;border-radius:7px;border:1px solid var(--border)}
+  .btn{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;
+    padding:8px 14px;border-radius:9px;cursor:pointer;border:1px solid var(--border2);
+    background:var(--panel2);color:var(--txt);text-decoration:none;margin-top:11px}
+  .btn.primary{background:var(--green);color:#04130d;border-color:var(--green)}
+
+  /* MITRE */
+  .mitre{border:1px solid var(--border2);border-radius:12px;margin-top:14px;overflow:hidden}
+  .mitre .mh{background:var(--panel2);padding:11px 15px;font-size:12px;font-weight:700;
+    display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--green)}
+  .mitre .mb{padding:15px}
+  .chain{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .chain-node{display:flex;gap:8px;align-items:flex-start;background:var(--bg2);border:1px solid var(--border);
+    border-radius:9px;padding:9px 11px;flex:1;min-width:200px}
+  .chain-dot{width:20px;height:20px;border-radius:6px;background:var(--green-glow);color:var(--green);
+    display:grid;place-items:center;font-size:11px;font-weight:800;flex-shrink:0}
+  .chain-phase{font-size:11.5px;font-weight:700}
+  .chain-desc{font-size:11px;color:var(--muted);line-height:1.45;margin-top:2px}
+  .chain-mitre{font-size:9.5px;color:var(--green);font-family:ui-monospace,monospace;margin-top:3px}
+  .techs{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
+  .tech{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:10px 12px}
+  .tech .tid{font-size:11px;font-weight:700;color:var(--green);font-family:ui-monospace,monospace}
+  .tech .tnm{font-size:11.5px;font-weight:600;margin:3px 0}
+  .tech .td{font-size:10.5px;color:var(--muted);line-height:1.4}
+  .tech .sev{font-size:9px;font-weight:700;padding:1px 6px;border-radius:12px;margin-top:5px;display:inline-block}
+  .tech .sev.critical{background:rgba(255,77,94,.15);color:var(--red)}
+  .tech .sev.high{background:rgba(255,159,67,.15);color:var(--orange)}
+  .biz{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:13px}
+  .biz .bt{font-size:11px;font-weight:700;margin-bottom:9px;color:var(--txt)}
+  .biz-row{display:flex;justify-content:space-between;font-size:11.5px;padding:4px 0;color:var(--muted)}
+  .biz-row b{color:var(--txt);font-weight:700}
+  .biz .score{font-size:22px;font-weight:800;color:var(--green)}
+  .bar{height:6px;background:var(--border);border-radius:6px;overflow:hidden;margin-top:5px}
+  .bar i{display:block;height:100%;background:var(--green)}
+
+  /* RAG sources */
+  .rag{margin-top:12px;border-top:1px solid var(--border);padding-top:12px}
+  .rag .rh{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px}
+  .rag-src{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:6px;
+    cursor:pointer}
+  .rag-src .rs-top{display:flex;justify-content:space-between;font-size:11px}
+  .rag-src .rs-dom{font-weight:700;color:var(--green)}
+  .rag-src .rs-sc{color:var(--muted2);font-weight:700}
+  .rag-src .rs-prev{font-size:10.5px;color:var(--muted);margin-top:4px;font-family:ui-monospace,monospace;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* Input */
+  .input-bar{display:flex;gap:10px;padding:16px 26px;border-top:1px solid var(--border);background:rgba(10,13,11,.6)}
+  .input-bar input{flex:1;background:var(--panel);border:1px solid var(--border2);border-radius:11px;
+    padding:13px 16px;color:var(--txt);font-size:13.5px;outline:none;font-family:inherit}
+  .input-bar input:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-glow)}
+  .input-bar input::placeholder{color:var(--muted2)}
+  .send{background:var(--green);color:#04130d;border:none;border-radius:11px;padding:0 20px;font-weight:700;
+    font-size:14px;cursor:pointer;transition:.15s}
+  .send:disabled{opacity:.4;cursor:not-allowed}
+  .send:hover:not(:disabled){background:var(--green-d)}
+
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--panel2);border:1px solid var(--border2);
+    border-radius:10px;padding:12px 18px;font-size:13px;opacity:0;transform:translateY(10px);
+    transition:.25s;pointer-events:none;z-index:50}
+  .toast.show{opacity:1;transform:translateY(0)}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="sq">D</div>
+      <div><div class="name">DISCOPE</div><div class="sub">AGENT PLATFORM</div></div>
+    </div>
+    <div class="nav-h">Workspace</div>
+    <div class="nav-item active" data-view="scan"><span class="ic">⌖</span> Scan <span class="badge">Active</span></div>
+    <div class="nav-item" data-view="history"><span class="ic">🕐</span> History</div>
+    <div class="nav-item" data-view="analytics"><span class="ic">📊</span> Analytics</div>
+    <div class="nav-item" data-view="sources"><span class="ic">🛡</span> Threat Sources</div>
+
+    <div class="nav-h">Recent Scans</div>
+    <div class="recent" id="recentList"></div>
+    <div class="view-all" id="viewAll">View all scans →</div>
+
+    <div class="user">
+      <div class="avatar">A</div>
+      <div><div class="nm">Akshay</div><div class="rl">RED TEAM OPERATOR</div></div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <div class="crumbs">Workspace <span style="color:var(--muted2)">›</span> <b id="crumbView">Intelligence Panel</b></div>
+      <div class="spacer"></div>
+      <div class="live" id="liveBtn"><span class="ind"></span> Live</div>
+      <div class="clear-btn" id="clearBtn">🗑 Clear</div>
+    </div>
+
+    <div class="scroll" id="scroll">
+      <!-- STATS -->
+      <div class="stats" id="statsRow">
+        <div class="stat"><div class="lbl">Indexed Records</div><div class="val" id="stRecords">—</div><div class="tr up" id="stRecordsTr">loading…</div></div>
+        <div class="stat"><div class="lbl">Active Threat Sources</div><div class="val" id="stSources">—</div><div class="tr up" id="stSourcesTr">live</div></div>
+        <div class="stat"><div class="lbl">Domains Indexed</div><div class="val" id="stDomains">—</div><div class="tr flat" id="stDomainsTr">semantic</div></div>
+        <div class="stat"><div class="lbl">Queries Logged</div><div class="val" id="stQueries">—</div><div class="tr flat" id="stQueriesTr">session</div></div>
+      </div>
+
+      <!-- HERO -->
+      <div class="hero" id="hero">
+        <div class="pill">⚡ THREAT INTELLIGENCE</div>
+        <h1>Command center for credential <span class="hl">leak detection</span>.</h1>
+        <p>Scan any domain for stealer logs and credential leaks, or query data we've already indexed across our threat sources.</p>
+        <div class="actions">
+          <div class="act" data-act="scan" data-dom="dewa.gov.ae"><div class="k">SCAN DOMAIN</div><div class="v">dewa.gov.ae</div><span class="go">→</span></div>
+          <div class="act" data-act="scan" data-dom="rta.ae"><div class="k">SCAN DOMAIN</div><div class="v">rta.ae</div><span class="go">→</span></div>
+          <div class="act" data-act="fresh" data-dom="gmail.com"><div class="k">FORCE RE-SCAN</div><div class="v">gmail.com</div><span class="go">→</span></div>
+          <div class="act" data-act="query" data-dom="credentials"><div class="k">QUERY INDEXED DATA</div><div class="v">credentials</div><span class="go">→</span></div>
+        </div>
+      </div>
+
+      <!-- CHAT -->
+      <div class="chat-wrap">
+        <div class="chat-head"><span class="ic">⌖</span> Intelligence Chat</div>
+        <div class="chat-inner" id="chatInner">
+          <div class="welcome" id="welcome">
+            <h3>Ready when you are</h3>
+            <p>Scan a domain or ask a follow-up about your last scan. Try: <i>“scan dewa.gov.ae”</i> or <i>“what mitigations should I take?”</i></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INPUT -->
+    <div class="input-bar">
+      <input id="msgInput" placeholder="Scan a domain or ask about indexed data..." autocomplete="off">
+      <button class="send" id="sendBtn">Send</button>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const chatInner = $('#chatInner');
+const input = $('#msgInput');
+const sendBtn = $('#sendBtn');
+const welcome = $('#welcome');
+
+let sessionId = 'web_' + Math.random().toString(36).slice(2,10);
+let messageHistory = [];
+let recentScans = [];
+let scanning = false;
+
+function timestamp(){const d=new Date();return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
+function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function scrollBottom(){chatInner.scrollTop = chatInner.scrollHeight}
+function showToast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
+function showTyping(){const d=document.createElement('div');d.className='msg';d.id='typingMsg';
+  d.innerHTML='<div class="meta"><span class="r">DISCOPE</span><span>'+timestamp()+'</span></div><div class="body"><span class="typing-dots"><span></span><span></span><span></span></span></div>';
+  chatInner.appendChild(d);scrollBottom();}
+function hideTyping(){const t=document.getElementById('typingMsg');if(t)t.remove();}
+
+function addMessage(role, text, opts){
+  opts = opts || {};
+  if(welcome) welcome.remove();
+  const div=document.createElement('div');
+  div.className='msg'+(role==='user'?' user':'');
+  const roleLabel = role==='user'?'You':'DISCOPE';
+  let bodyInner = esc(text);
+  // Scan result card
+  if(opts.isScanResult){
+    const sev = opts.severity||'low';
+    const icon = sev==='high'?'!':(sev==='medium'?'!':'✓');
+    const label = sev==='high'?'Critical Risk':(sev==='medium'?'Warning':'All Clear');
+    const desc = sev==='high'?'Sensitive data exposed — credentials found in stealer logs.':
+                 (sev==='medium'?'Suspicious activity detected — manual review recommended.':'No threats detected for this target.');
+    let credsHtml='';
+    if(opts.previewRecords && opts.previewRecords.length){
+      credsHtml='<div class="creds">'+opts.previewRecords.slice(0,5).map(c=>
+        '<div class="cred">'+(esc(c.email||'email')+' : '+(c.password? '••••••' : '—'))+'</div>').join('')+'</div>';
+    }
+    let actions='';
+    if(opts.fileDownload){
+      actions='<a class="btn primary" href="'+esc(opts.fileDownload.download_url)+'" download>⬇ Download Report ('+opts.fileDownload.fileSizeMb+' MB)</a>';
+    }
+    bodyInner='<div class="scan-card"><div class="top"><div class="sev-ic '+sev+'">'+icon+'</div>'+
+      '<div class="ttl">'+(esc(opts.target||'Target'))+'</div>'+
+      '<div class="st '+sev+'">'+label+'</div></div>'+
+      '<div class="desc">'+desc+'</div>'+credsHtml+actions+'</div>'+
+      (opts.mitre?renderMitre(opts.mitre):'');
+  }
+  // RAG sources
+  if(opts.sources && opts.sources.length){
+    bodyInner += '<div class="rag"><div class="rh">SOURCES ('+opts.sources.length+')</div>'+
+      opts.sources.slice(0,4).map(s=>'<div class="rag-src"><div class="rs-top"><span class="rs-dom">'+esc(s.domain||s.source||'?')+
+      '</span><span class="rs-sc">'+((s.score??s.relevance_score??0)*100).toFixed(0)+'%</span></div>'+
+      '<div class="rs-prev">'+esc((s.content_preview||'').slice(0,90))+'</div></div>').join('')+'</div>';
+  }
+  div.innerHTML='<div class="meta"><span class="'+(role==='user'?'':'' )+'">'+(role==='user'?'':'' )+roleLabel+'</span><span>'+timestamp()+'</span></div><div class="body">'+bodyInner+'</div>';
+  chatInner.appendChild(div);
+  scrollBottom();
+}
+
+function renderMitre(m){
+  const impact=m.business_impact||{};
+  const chain=(m.attack_chain||[]).map((s,i)=>'<div class="chain-node"><div class="chain-dot">'+(i+1)+
+    '</div><div><div class="chain-phase">'+esc(s.phase||'')+'</div><div class="chain-desc">'+esc(s.description||'')+
+    '</div><span class="chain-mitre">'+esc(s.mitre||'')+'</span></div></div>').join('');
+  const techs=(m.techniques||[]).slice(0,4).map(t=>'<div class="tech"><div class="tid">'+esc(t.id||'')+
+    '</div><div class="tnm">'+esc(t.name||'')+'</div><div class="td">'+esc(t.description||'')+'</div>'+
+    '<span class="sev '+(t.severity||'')+'">'+(t.severity||'').toUpperCase()+'</span></div>').join('');
+  const score=impact.risk_score||0;
+  return '<div class="mitre"><div class="mh">🎯 MITRE ATT&CK MAPPING — '+esc(impact.industry||'')+
+    ' · Risk '+score+'/100</div><div class="mb">'+
+    '<div class="chain">'+chain+'</div>'+
+    '<div class="techs">'+techs+'</div>'+
+    '<div class="biz"><div class="bt">BUSINESS IMPACT ASSESSMENT</div>'+
+    '<div class="score">'+score+'<span style="font-size:13px;color:var(--muted)">/100</span></div>'+
+    '<div class="bar"><i style="width:'+score+'%"></i></div>'+
+    '<div class="biz-row"><span>Credentials Exposed</span><b>'+esc(impact.credential_count)+'</b></div>'+
+    '<div class="biz-row"><span>Direct Exposure Cost</span><b>$'+Number(impact.direct_exposure_cost||0).toLocaleString()+'</b></div>'+
+    '<div class="biz-row"><span>Probability of Breach</span><b>'+esc(impact.probability_percentage||'')+'</b></div>'+
+    '<div class="biz-row"><span>Expected Breach Cost</span><b>$'+Number(impact.expected_breach_cost||0).toLocaleString()+'</b></div>'+
+    '</div></div></div>';
+}
+
+// ── API ──
+async function apiChat(text){
+  const res = await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({message:text,history:messageHistory.slice(-10),session_id:sessionId})});
+  return await res.json();
+}
+
+async function send(text){
+  text=(text||input.value).trim();
+  if(!text||scanning) return;
+  sendBtn.disabled=true; scanning=true; $('#liveBtn').classList.add('active');
+  addMessage('user',text);
+  messageHistory.push({role:'user',content:text});
+  input.value=''; input.style.height='auto';
+  showTyping();
+  let data;
+  try{
+    data = await apiChat(text);
+  }catch(e){
+    hideTyping(); showToast('Connection failed');
+    addMessage('ai','Connection error — is the server running on port 8080?');
+    scanning=false; sendBtn.disabled=false; $('#liveBtn').classList.remove('active'); return;
+  }
+  hideTyping(); $('#liveBtn').classList.remove('active'); scanning=false; sendBtn.disabled=false;
+  if(data.status==='ok'){
+    const isScan=data.is_scan_result;
+    const level=data.threat_level||'low';
+    addMessage('ai', data.response||'', {
+      isScanResult:isScan, severity:level, target:data.target||'',
+      fileDownload:data.file_download||null,
+      previewRecords:data.preview_records||null,
+      sources:data.sources||null, mitre:data.mitre||null
+    });
+    messageHistory.push({role:'assistant',content:data.response||''});
+    if(isScan && data.target){
+      addRecent(data.target, level);
+    }
+  } else {
+    addMessage('ai','Something went wrong: '+(data.error||'unknown'));
+  }
+  if(messageHistory.length>50) messageHistory=messageHistory.slice(-50);
+}
+
+// ── Recent scans (client-side from session) ──
+function addRecent(domain, level){
+  recentScans = recentScans.filter(r=>r.domain!==domain);
+  recentScans.unshift({domain, level, tm:'just now'});
+  renderRecent();
+}
+function renderRecent(){
+  const el=$('#recentList');
+  if(!recentScans.length){el.innerHTML='<div class="recent-item" style="color:var(--muted2);cursor:default">No scans yet</div>';return;}
+  el.innerHTML=recentScans.slice(0,4).map(r=>
+    '<div class="recent-item" data-dom="'+esc(r.domain)+'"><span class="dot '+(r.level==='high'?'o':'g')+'"></span>'+
+    '<span class="dom">'+esc(r.domain)+'</span><span class="tm">'+esc(r.tm)+'</span></div>').join('');
+  el.querySelectorAll('.recent-item[data-dom]').forEach(it=>
+    it.addEventListener('click',()=>send('scan '+it.dataset.dom)));
+}
+
+// ── Load real stats from backend ──
+async function loadStats(){
+  try{
+    const [st,sr,hs] = await Promise.all([
+      fetch('/api/stats').then(r=>r.json()),
+      fetch('/api/sources').then(r=>r.json()),
+      fetch('/api/history').then(r=>r.json())
+    ]);
+    const db=st.database||{};
+    const sem=st.semantic||{};
+    $('#stRecords').textContent = (db.total_records||0).toLocaleString();
+    $('#stRecordsTr').textContent = '+'+((db.database&&db.database.total_records)?'indexed':'0')+' total';
+    $('#stSources').textContent = (sr.sources||[]).filter(s=>s.enabled).length;
+    $('#stDomains').textContent = (sem.domains||0).toLocaleString();
+    $('#stQueries').textContent = (sem.queries_logged||0).toLocaleString();
+  }catch(e){/* non-fatal */}
+}
+async function loadRecentFromHistory(){
+  try{
+    const hs=await fetch('/api/history').then(r=>r.json());
+    const items=(hs.history||[]).slice(0,8);
+    // derive domains from queries like "scan dewa.gov.ae"
+    const dm=items.map(h=>{const m=(h.query||'').match(/([a-z0-9.-]+\.[a-z]{2,})/i);return m?m[1]:null;}).filter(Boolean);
+    const uniq=[...new Set(dm)].slice(0,4);
+    if(uniq.length){
+      recentScans = uniq.map((d,i)=>({domain:d, level:'low', tm:(i===0?'2m':(i===1?'8m':(i===2?'41m':'1h'))+' ago')}));
+      renderRecent();
+    }
+  }catch(e){}
+}
+
+// ── Events ──
+sendBtn.addEventListener('click',()=>send());
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
+$('#clearBtn').addEventListener('click',()=>{
+  chatInner.innerHTML=''; const w=document.createElement('div');w.className='welcome';w.id='welcome';
+  w.innerHTML='<h3>Ready when you are</h3><p>Scan a domain or ask a follow-up about your last scan.</p>';
+  chatInner.appendChild(w); messageHistory=[]; showToast('Conversation cleared');
+});
+document.querySelectorAll('.act').forEach(a=>a.addEventListener('click',()=>{
+  const act=a.dataset.act, dom=a.dataset.dom;
+  if(act==='scan') send('scan '+dom);
+  else if(act==='fresh') send('scan fresh '+dom);
+  else if(act==='query') send(dom);
+}));
+document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>{
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  n.classList.add('active');
+  const v=n.dataset.view;
+  $('#crumbView').textContent = v==='scan'?'Intelligence Panel':(v.charAt(0).toUpperCase()+v.slice(1));
+  if(v==='sources'){ send('list threat sources'); }
+  else if(v==='history'){ send('show my scan history'); }
+  else if(v==='analytics'){ send('show analytics summary'); }
+}));
+$('#viewAll').addEventListener('click',()=>{document.querySelector('[data-view="history"]').click();});
+
+// init
+renderRecent();
+loadStats();
+loadRecentFromHistory();
+</script>
+</body>
+</html>
