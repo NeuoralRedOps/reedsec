@@ -47,6 +47,9 @@ SESSIONS = {}
 SESSIONS_LOCK = threading.Lock()
 SESSION_MAX_MESSAGES = 40
 
+# Per-session last scan result — lets follow-up questions reference findings
+SESSION_SCAN_CTX = {}
+
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("disma.agent")
 
@@ -272,15 +275,18 @@ SYSTEM_PROMPT = """You are **DISCOPE AGENT** — a threat intelligence scanning 
 - Respond naturally — short sentences, varied tone, real personality.
 - Feel like a smart friend who happens to be a security expert.
 
-## SCOPE — You ONLY do ONE thing: scan domains for stealer logs.
-- If the user asks something unrelated (cooking, sports, history, etc.), politely redirect to scanning. Don't provide that info.
+## SCOPE — You scan domains for stealer logs AND help interpret the results.
+- Core task: scan domains for stealer logs and credential leaks.
+- ALSO in scope: follow-up discussion about scan results — explaining findings, listing compromised emails, recommending mitigations/remediation, takedown from surface web, attack-chain explanation, next steps. These are all part of being a security expert assistant.
+- Out of scope: unrelated small talk (cooking, sports, history) — politely redirect to scanning.
 - The user might phrase requirements casually. Understand the INTENT, not just keywords.
 
 ## COMMANDS you support
 - `scan <domain>` — run a fresh stealer-log + leak scan across our threat sources
 - `scan fresh <domain>` — bypass cache, force live re-scan
+- Questions about findings: compromised emails, mitigations, remediation, takedown, attack details, business impact
 - casual questions about findings, threats, sources, what you can do
-- Anything outside this scope: redirect to "I can only help with scanning domains."
+- Anything completely unrelated (not security): politely redirect to scanning.
 
 ## RESPONSE STYLE
 - Always warm + conversational.
@@ -334,12 +340,14 @@ def has_query_intent(text: str) -> bool:
     data_keywords = (
         r'\b(credentials?|passwords?|emails?|logins?|leaks?|logs?|findings?|'
         r'results?|breaches?|compromised?|stolen|hacked?|dumped?|exposed|'
-        r'accounts?|usernames?)\b'
+        r'accounts?|usernames?|mitigations?|remediat\w*|protect|defend|'
+        r'prevent|surface web|take down|remove|hide|next steps?|'
+        r'what should|how (do|to|can) (i|we)|advice|recommend\w*)\\b'
     )
     if not re.search(data_keywords, t):
         return False
     # Question starters or imperative "show me"
-    if re.search(r'\b(what|which|who|show|list|tell|how many|did|were|was|are there|is there|give|find)\b', t):
+    if re.search(r'\b(what|which|who|show|list|tell|how many|did|were|was|are there|is there|give|find|should|can|do|to|next|why|explain)\b', t):
         return True
     return False
 
@@ -915,13 +923,59 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     response_data["file_download"] = file_download_info
                     response_data["has_file_attachment"] = True
 
+            # Store scan context for follow-up questions in this session
+            with SESSIONS_LOCK:
+                SESSION_SCAN_CTX[session_id] = {
+                    "domain": domain,
+                    "threat_level": threat_level,
+                    "has_critical": has_critical,
+                    "has_leak": has_leak,
+                    "total_count": total_count,
+                    "summary": summary,
+                    "preview_records": preview_records,
+                    "mitre": mitre_report.get("mitre") if mitre_report else None,
+                }
+
             with SESSIONS_LOCK:
                 SESSIONS[session_id].append({"role": "assistant", "content": final})
             self._json(response_data)
             return
 
         # ── Non-scan: pure AI chat ──
-        ai_reply = call_ai(ai_messages, max_tokens=350, system_prompt=SYSTEM_PROMPT)
+        # Inject prior scan context if this session has one (enables follow-ups)
+        scan_ctx = SESSION_SCAN_CTX.get(session_id)
+        chat_system_prompt = SYSTEM_PROMPT
+        if scan_ctx:
+            ctx_block = (
+                f"\n\n## CONTEXT — Last scan in this conversation:\n"
+                f"Domain: {scan_ctx['domain']}\n"
+                f"Threat level: {scan_ctx['threat_level']}\n"
+                f"Total records: {scan_ctx['total_count']}\n"
+                f"Has critical: {scan_ctx['has_critical']}\n"
+                f"Has leak: {scan_ctx['has_leak']}\n"
+            )
+            if scan_ctx.get("preview_records"):
+                creds = scan_ctx["preview_records"][:5]
+                ctx_block += "Sample credentials found:\n" + "\n".join(
+                    f"  - {c.get('email','?')}" for c in creds
+                ) + "\n"
+            if scan_ctx.get("mitre"):
+                m = scan_ctx["mitre"]
+                bi = m.get("business_impact", {})
+                ctx_block += (
+                    f"MITRE risk score: {bi.get('risk_score')}\n"
+                    f"Industry: {bi.get('industry')}\n"
+                )
+            ctx_block += (
+                "\nThe user may ask follow-up questions about THIS scan "
+                "(emails compromised, mitigations, how to remove from surface web, "
+                "next steps, attack details). Answer helpfully using this context "
+                "plus your security expertise. You are allowed to discuss mitigations, "
+                "remediation, and takedown — that is within scope."
+            )
+            chat_system_prompt = SYSTEM_PROMPT + ctx_block
+
+        ai_reply = call_ai(ai_messages, max_tokens=350, system_prompt=chat_system_prompt)
         with SESSIONS_LOCK:
             SESSIONS[session_id].append({"role": "assistant", "content": ai_reply})
         self._json({
