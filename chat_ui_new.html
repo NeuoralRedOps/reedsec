@@ -879,9 +879,9 @@ function addMessage(role, text, opts) {
       actionsHtml += '<a class="btn primary" href="' + esc(opts.fileDownload.download_url) + '" download>Download Report</a>';
     }
 
-    // MITRE mapping panel
+    // MITRE mapping panel — ONLY for critical findings (not warnings)
     let mitreHtml = '';
-    if (opts.mitre) {
+    if (opts.mitre && sev === 'high') {
       const m = opts.mitre;
       const impact = m.business_impact || {};
       const chain = m.attack_chain || [];

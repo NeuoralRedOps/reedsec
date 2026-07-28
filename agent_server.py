@@ -879,19 +879,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 status_text = "Warning"
                 status_state = ""
 
-            # Generate MITRE mapping report
+            # Generate MITRE mapping ONLY for confirmed critical findings
+            # NOT for warnings, mentions, or subdomains
             mitre_report = None
-            if total_count > 0:
+            if threat_level == "high" and has_critical:
                 try:
-                    # Convert records to dicts for MITRE mapper
-                    finding_dicts = []
-                    for rec in records[:50]:  # Limit to 50 for performance
-                        finding_dicts.append({
-                            "record_type": rec.record_type if hasattr(rec, 'record_type') else rec.get("record_type", "credential_leak"),
-                            "severity": rec.severity if hasattr(rec, 'severity') else rec.get("severity", "info"),
-                            "domain": domain,
-                        })
-                    mitre_report = generate_mitre_report(domain, finding_dicts)
+                    # Only count actual credential_leak and stealer_log records
+                    # with critical/high severity — skip mentions and subdomains
+                    confirmed_findings = []
+                    for rec in records[:50]:
+                        rec_type = rec.record_type if hasattr(rec, 'record_type') else rec.get("record_type", "")
+                        rec_severity = rec.severity if hasattr(rec, 'severity') else rec.get("severity", "")
+                        if rec_type in ("credential_leak", "stealer_log") and rec_severity in ("critical", "high"):
+                            confirmed_findings.append({
+                                "record_type": rec_type,
+                                "severity": rec_severity,
+                                "domain": domain,
+                            })
+                    if confirmed_findings:
+                        mitre_report = generate_mitre_report(domain, confirmed_findings)
                 except Exception as e:
                     logger.warning(f"MITRE mapping failed: {e}")
 
