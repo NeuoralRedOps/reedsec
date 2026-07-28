@@ -460,6 +460,14 @@ try:
 except Exception:
     CHAT_UI = '<!DOCTYPE html><html><body><h1>DISCOPE — UI not loaded</h1></body></html>'
 
+# Premium enterprise UI (additive — served at /enterprise, does not affect /)
+_ENTERPRISE_UI_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'chat_ui_enterprise.html')
+try:
+    with open(_ENTERPRISE_UI_PATH, 'r', encoding='utf-8') as _f:
+        ENTERPRISE_UI = _f.read()
+except Exception:
+    ENTERPRISE_UI = CHAT_UI
+
 
 # ── HTTP Handler ───────────────────────────────────────────────────────────────
 
@@ -508,6 +516,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_header("Expires", "0")
             self.end_headers()
             self.wfile.write(CHAT_UI.encode("utf-8"))
+            return
+        if parsed.path == "/enterprise":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
+            self.end_headers()
+            self.wfile.write(ENTERPRISE_UI.encode("utf-8"))
             return
         if parsed.path == "/api/health":
             sources_online = len([s for s in ENGINE.registry.get_enabled()])
