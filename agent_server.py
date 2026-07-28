@@ -293,6 +293,7 @@ SYSTEM_PROMPT = """You are **DISCOPE AGENT** — a threat intelligence scanning 
 - Acknowledge name when given. ("Hey Akshay, ...")
 - After scan: report findings in 2–4 short sentences max. No big tables.
 - Be a friend — not a robot.
+- CRITICAL: Never narrate your own reasoning or the context you were given. Do NOT say "The user wants to know..." or "Looking at the scan results..." or "Based on the context...". Just answer the user's question directly, in your own voice, as DISCOPE. Speak like a person chatting — not like a system processing data.
 
 ## FULL DOMAIN SCANS
 For heavy scans (TTM stealer logs, etc.) you don't respond yourself — the engine handles results. Just acknowledge and let it run.
@@ -946,32 +947,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
         scan_ctx = SESSION_SCAN_CTX.get(session_id)
         chat_system_prompt = SYSTEM_PROMPT
         if scan_ctx:
-            ctx_block = (
-                f"\n\n## CONTEXT — Last scan in this conversation:\n"
-                f"Domain: {scan_ctx['domain']}\n"
-                f"Threat level: {scan_ctx['threat_level']}\n"
-                f"Total records: {scan_ctx['total_count']}\n"
-                f"Has critical: {scan_ctx['has_critical']}\n"
-                f"Has leak: {scan_ctx['has_leak']}\n"
-            )
+            # Pre-build a clean one-line summary (NOT raw metadata dump)
+            cred_count = scan_ctx.get("total_count", 0)
+            threat = scan_ctx.get("threat_level", "low")
+            domain = scan_ctx.get("domain", "")
+            creds_sample = ""
             if scan_ctx.get("preview_records"):
-                creds = scan_ctx["preview_records"][:5]
-                ctx_block += "Sample credentials found:\n" + "\n".join(
-                    f"  - {c.get('email','?')}" for c in creds
-                ) + "\n"
-            if scan_ctx.get("mitre"):
-                m = scan_ctx["mitre"]
-                bi = m.get("business_impact", {})
-                ctx_block += (
-                    f"MITRE risk score: {bi.get('risk_score')}\n"
-                    f"Industry: {bi.get('industry')}\n"
-                )
-            ctx_block += (
-                "\nThe user may ask follow-up questions about THIS scan "
-                "(emails compromised, mitigations, how to remove from surface web, "
-                "next steps, attack details). Answer helpfully using this context "
-                "plus your security expertise. You are allowed to discuss mitigations, "
-                "remediation, and takedown — that is within scope."
+                emails = [c.get('email', '?') for c in scan_ctx["preview_records"][:3]]
+                creds_sample = " Some emails involved: " + ", ".join(emails) + "."
+            summary_line = (
+                f"Summary of the scan you ran earlier for {domain}: "
+                f"threat level {threat}, {cred_count} record(s) found.{creds_sample}"
+            )
+            ctx_block = (
+                "\n\n## WHAT YOU ALREADY TOLD THE USER\n"
+                f"{summary_line}\n\n"
+                "The user is now asking a follow-up. Answer it naturally as DISCOPE — "
+                "like a person replying in a chat. Do NOT analyze, dissect, or narrate "
+                "your own thought process. Do NOT write 'The user wants...' or 'Looking at...'. "
+                "Just give a short, direct, friendly answer."
             )
             chat_system_prompt = SYSTEM_PROMPT + ctx_block
 
