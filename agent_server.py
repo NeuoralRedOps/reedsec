@@ -31,6 +31,7 @@ sys.path.insert(0, SCRIPTS_DIR)
 from disma_core.engine import DISMAEngine
 from disma_core.base_source import StealerLogRecord
 from disma_core.semantic import SemanticStore
+from disma_core.mitre_mapper import generate_mitre_report
 
 PORT = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[1] == "--port" else 8080
 
@@ -45,6 +46,9 @@ SEMANTIC = SemanticStore(os.path.join(SCRIPTS_DIR, "disma_data", "stealer_logs.d
 SESSIONS = {}
 SESSIONS_LOCK = threading.Lock()
 SESSION_MAX_MESSAGES = 40
+
+# Per-session last scan result — lets follow-up questions reference findings
+SESSION_SCAN_CTX = {}
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("disma.agent")
@@ -271,21 +275,25 @@ SYSTEM_PROMPT = """You are **DISCOPE AGENT** — a threat intelligence scanning 
 - Respond naturally — short sentences, varied tone, real personality.
 - Feel like a smart friend who happens to be a security expert.
 
-## SCOPE — You ONLY do ONE thing: scan domains for stealer logs.
-- If the user asks something unrelated (cooking, sports, history, etc.), politely redirect to scanning. Don't provide that info.
+## SCOPE — You scan domains for stealer logs AND help interpret the results.
+- Core task: scan domains for stealer logs and credential leaks.
+- ALSO in scope: follow-up discussion about scan results — explaining findings, listing compromised emails, recommending mitigations/remediation, takedown from surface web, attack-chain explanation, next steps. These are all part of being a security expert assistant.
+- Out of scope: unrelated small talk (cooking, sports, history) — politely redirect to scanning.
 - The user might phrase requirements casually. Understand the INTENT, not just keywords.
 
 ## COMMANDS you support
 - `scan <domain>` — run a fresh stealer-log + leak scan across our threat sources
 - `scan fresh <domain>` — bypass cache, force live re-scan
+- Questions about findings: compromised emails, mitigations, remediation, takedown, attack details, business impact
 - casual questions about findings, threats, sources, what you can do
-- Anything outside this scope: redirect to "I can only help with scanning domains."
+- Anything completely unrelated (not security): politely redirect to scanning.
 
 ## RESPONSE STYLE
 - Always warm + conversational.
 - Acknowledge name when given. ("Hey Akshay, ...")
 - After scan: report findings in 2–4 short sentences max. No big tables.
 - Be a friend — not a robot.
+- CRITICAL: Never narrate your own reasoning or the context you were given. Do NOT say "The user wants to know..." or "Looking at the scan results..." or "Based on the context...". Just answer the user's question directly, in your own voice, as DISCOPE. Speak like a person chatting — not like a system processing data.
 
 ## FULL DOMAIN SCANS
 For heavy scans (TTM stealer logs, etc.) you don't respond yourself — the engine handles results. Just acknowledge and let it run.
@@ -333,12 +341,14 @@ def has_query_intent(text: str) -> bool:
     data_keywords = (
         r'\b(credentials?|passwords?|emails?|logins?|leaks?|logs?|findings?|'
         r'results?|breaches?|compromised?|stolen|hacked?|dumped?|exposed|'
-        r'accounts?|usernames?)\b'
+        r'accounts?|usernames?|mitigations?|remediat\w*|protect|defend|'
+        r'prevent|surface web|take down|remove|hide|next steps?|'
+        r'what should|how (do|to|can) (i|we)|advice|recommend\w*)\\b'
     )
     if not re.search(data_keywords, t):
         return False
     # Question starters or imperative "show me"
-    if re.search(r'\b(what|which|who|show|list|tell|how many|did|were|was|are there|is there|give|find)\b', t):
+    if re.search(r'\b(what|which|who|show|list|tell|how many|did|were|was|are there|is there|give|find|should|can|do|to|next|why|explain)\b', t):
         return True
     return False
 
@@ -878,6 +888,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 status_text = "Warning"
                 status_state = ""
 
+            # Generate MITRE mapping report
+            mitre_report = None
+            if total_count > 0:
+                try:
+                    # Convert records to dicts for MITRE mapper
+                    finding_dicts = []
+                    for rec in records[:50]:  # Limit to 50 for performance
+                        finding_dicts.append({
+                            "record_type": rec.record_type if hasattr(rec, 'record_type') else rec.get("record_type", "credential_leak"),
+                            "severity": rec.severity if hasattr(rec, 'severity') else rec.get("severity", "info"),
+                            "domain": domain,
+                        })
+                    mitre_report = generate_mitre_report(domain, finding_dicts)
+                except Exception as e:
+                    logger.warning(f"MITRE mapping failed: {e}")
+
             response_data = {
                 "status": "ok",
                 "response": final,
@@ -888,6 +914,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "status_state": status_state,
             }
 
+            if mitre_report:
+                response_data["mitre"] = mitre_report.get("mitre")
+
             if preview_records or has_raw_results or total_count > 0:
                 response_data["preview_records"] = preview_records
                 response_data["total_records_count"] = total_count
@@ -895,13 +924,52 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     response_data["file_download"] = file_download_info
                     response_data["has_file_attachment"] = True
 
+            # Store scan context for follow-up questions in this session
+            with SESSIONS_LOCK:
+                SESSION_SCAN_CTX[session_id] = {
+                    "domain": domain,
+                    "threat_level": threat_level,
+                    "has_critical": has_critical,
+                    "has_leak": has_leak,
+                    "total_count": total_count,
+                    "summary": summary,
+                    "preview_records": preview_records,
+                    "mitre": mitre_report.get("mitre") if mitre_report else None,
+                }
+
             with SESSIONS_LOCK:
                 SESSIONS[session_id].append({"role": "assistant", "content": final})
             self._json(response_data)
             return
 
         # ── Non-scan: pure AI chat ──
-        ai_reply = call_ai(ai_messages, max_tokens=350, system_prompt=SYSTEM_PROMPT)
+        # Inject prior scan context if this session has one (enables follow-ups)
+        scan_ctx = SESSION_SCAN_CTX.get(session_id)
+        chat_system_prompt = SYSTEM_PROMPT
+        if scan_ctx:
+            # Pre-build a clean one-line summary (NOT raw metadata dump)
+            cred_count = scan_ctx.get("total_count", 0)
+            threat = scan_ctx.get("threat_level", "low")
+            domain = scan_ctx.get("domain", "")
+            creds_sample = ""
+            if scan_ctx.get("preview_records"):
+                emails = [c.get('email', '?') for c in scan_ctx["preview_records"][:3]]
+                creds_sample = " Some emails involved: " + ", ".join(emails) + "."
+            summary_line = (
+                f"Summary of the scan you ran earlier for {domain}: "
+                f"threat level {threat}, {cred_count} record(s) found.{creds_sample}"
+            )
+            ctx_block = (
+                "\n\n## WHAT YOU ALREADY TOLD THE USER\n"
+                f"{summary_line}\n\n"
+                "The user is now asking a follow-up. Answer it naturally as DISCOPE — "
+                "like a person replying in a chat. Do NOT analyze, dissect, or narrate "
+                "your own thought process. Do NOT write 'The user wants...' or 'Looking at...'. "
+                "Just give a short, direct, friendly answer."
+            )
+            chat_system_prompt = SYSTEM_PROMPT + ctx_block
+
+        ai_reply = call_ai(ai_messages, max_tokens=350, system_prompt=chat_system_prompt)
         with SESSIONS_LOCK:
             SESSIONS[session_id].append({"role": "assistant", "content": ai_reply})
         self._json({
