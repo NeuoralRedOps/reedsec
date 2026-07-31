@@ -65,7 +65,7 @@
   .user .rl{font-size:9px;color:var(--muted2);letter-spacing:.8px;font-weight:600}
 
   /* ── Main ── */
-  .main{display:flex;flex-direction:column;overflow:hidden}
+  .main{display:flex;flex-direction:column;height:100vh;overflow:hidden}
   .topbar{display:flex;align-items:center;gap:14px;padding:16px 26px;border-bottom:1px solid var(--border);
     background:rgba(10,13,11,.6);backdrop-filter:blur(8px)}
   .crumbs{font-size:13px;color:var(--muted)}
@@ -78,7 +78,7 @@
     padding:7px 13px;border:1px solid var(--border2);border-radius:20px;cursor:pointer}
   .clear-btn:hover{color:var(--red);border-color:rgba(255,77,94,.4)}
 
-  .scroll{flex:1;overflow-y:auto;padding:26px}
+  .scroll{flex:1;overflow-y:auto;padding:26px;display:flex;flex-direction:column}
   .scroll::-webkit-scrollbar{width:8px}
   .scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:8px}
 
@@ -92,7 +92,7 @@
 
   /* Hero */
   .hero{background:linear-gradient(135deg,var(--panel2),var(--panel));border:1px solid var(--border);
-    border-radius:var(--r);padding:30px 32px;margin-bottom:24px;position:relative;overflow:hidden}
+    border-radius:var(--r);padding:44px 40px;margin-bottom:24px;position:relative;overflow:hidden}
   .hero::after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;
     background:radial-gradient(circle,var(--green-glow),transparent 70%);border-radius:50%}
   .pill{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:1.2px;
@@ -107,10 +107,19 @@
   .act .k{font-size:10px;letter-spacing:1px;color:var(--muted2);font-weight:700}
   .act .v{font-size:14px;font-weight:600;margin-top:5px;color:var(--txt)}
   .act .go{position:absolute;right:14px;top:14px;color:var(--green);font-size:16px}
+  .layout-adj{display:inline-flex;align-items:center;gap:8px;margin-top:18px;font-size:11px;color:var(--muted);font-weight:600}
+  .layout-adj input[type="range"]{width:120px;accent-color:var(--green)}
+  .layout-adj button{background:var(--panel2);border:1px solid var(--border2);color:var(--txt);border-radius:8px;padding:6px 10px;cursor:pointer}
+  .layout-adj button:hover{border-color:var(--green)}
+  .hero.compact .actions{grid-template-columns:1fr}
+  .hero.compact .act{padding:10px 12px}
+  .hero.large .actions{grid-template-columns:1fr 1fr}
+  .hero.large .act{padding:16px 18px}
 
   /* Chat */
   .chat-wrap{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);
-    display:flex;flex-direction:column;height:calc(100vh - 360px);min-height:340px}
+    display:flex;flex-direction:column;min-height:420px;
+    transition:border-color .2s ease}
   .chat-head{padding:13px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;
     display:flex;align-items:center;gap:9px}
   .chat-head .ic{color:var(--green)}
@@ -211,15 +220,83 @@
     transition:.25s;pointer-events:none;z-index:50}
   .toast.show{opacity:1;transform:translateY(0)}
   .hidden{display:none!important}
+
+  /* ── DISCOPE Logo Mark ── */
+  .brand-logo{padding:14px 16px 12px;margin-bottom:6px;position:relative;
+    display:flex;flex-direction:column;align-items:center;gap:0}
+  .brand-logo .logo-grid{display:inline-grid;grid-template-columns:auto auto;
+    column-gap:1px;align-items:start;justify-content:center}
+  .brand-logo .scope-wrap{display:flex;flex-direction:column;gap:2px;align-items:flex-start}
+  .brand-logo .wordmark{font-family:'Segoe UI',Inter,'Helvetica Neue',Arial,sans-serif;
+    font-size:18px;font-weight:900;letter-spacing:.6px;line-height:1;text-transform:uppercase;
+    display:flex;align-items:center;gap:0;color:#dcd6c8}
+  .brand-logo .di{color:#ddd6c8}
+  .brand-logo .scope{color:#39ff14}
+  .brand-logo .agent{font-family:'Segoe UI',Inter,'Helvetica Neue',Arial,sans-serif;
+    font-size:9px;font-weight:900;letter-spacing:1.8px;line-height:1;text-transform:uppercase;
+    color:#00e5ff;padding-left:.75em;margin-top:1px}
+  .brand-logo .rule{width:100%;height:1px;background:linear-gradient(90deg, transparent 0%, rgba(255,255,255,.1) 50%, transparent 100%);margin-top:6px}
+
+  /* ── Footer ── */
+  .app-footer{padding:10px 16px;font-size:10px;color:var(--muted2);font-weight:600;letter-spacing:.4px;
+    text-align:center;margin-top:auto;opacity:.85;display:flex;align-items:center;justify-content:center;gap:2px;flex-wrap:wrap}
+  .app-footer .brand-ui{color:var(--green)}
+  .app-footer .brand-uae{display:inline-flex;gap:2px;font-weight:900;letter-spacing:.6px;text-transform:uppercase;vertical-align:middle;position:relative}
+  .app-footer .brand-uae .u{color:#d41c1c;text-shadow:0 0 0 rgba(0,0,0,.6),1px 1px 0 #000;-webkit-text-stroke:.6px #000}
+  .app-footer .brand-uae .a{color:#1d7a38;background:linear-gradient(180deg,#1d7a38 0%,#1d7a38 33%,#fff 33%,#fff 66%,#000 66%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 0 rgba(0,0,0,.6),1px 1px 0 #000;-webkit-text-stroke:.6px #000}
+  .app-footer .brand-uae .e{color:#1d7a38;background:linear-gradient(180deg,#1d7a38 0%,#1d7a38 33%,#fff 33%,#fff 66%,#000 66%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 0 rgba(0,0,0,.6),1px 1px 0 #000;-webkit-text-stroke:.6px #000}
+  .app-footer .brand-pride{font-weight:600;letter-spacing:.4px;color:var(--muted2)}
+
+  /* ── Micro-interactions ── */
+  @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+
+  .msg{max-width:78%;animation:fadeInUp .35s ease both}
+  .msg:hover .body{border-color:var(--border2);transition:border-color .2s ease}
+  .msg .body{transition:transform .15s ease,box-shadow .15s ease}
+
+  .act{transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease,background .15s ease}
+  .act:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.25);border-color:var(--green)}
+
+  .stat{transition:transform .15s ease,border-color .15s ease}
+  .stat:hover{transform:translateY(-2px);border-color:var(--border2)}
+
+  .live{transition:all .2s ease}
+  .live.active .ind{animation:pulse 1.8s infinite}
+
+  .btn{transition:transform .12s ease,box-shadow .15s ease}
+  .btn:active{transform:scale(.97)}
+  .btn.primary:hover:not(:disabled){box-shadow:0 0 14px var(--green-glow)}
+
+  .send{transition:transform .12s ease,background .15s ease,box-shadow .15s ease}
+  .send:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 12px var(--green-glow)}
+  .send:active:not(:disabled){transform:scale(.96)}
+
+  .nav-item{transition:all .15s ease}
+  .nav-item:hover{box-shadow:inset 3px 0 0 var(--green);padding-left:14px}
+
+  .chat-wrap{transition:border-color .25s ease,box-shadow .25s ease}
+  .chat-wrap:focus-within{border-color:var(--green);box-shadow:0 0 0 3px var(--green-glow)}
+
+  .toast{transition:opacity .25s ease,transform .25s ease}
+
+  .scan-card{animation:fadeInUp .4s ease both}
 </style>
 </head>
 <body>
 <div class="app">
   <!-- Sidebar -->
   <aside class="sidebar">
-    <div class="logo">
-      <div class="sq">D</div>
-      <div><div class="name">DISCOPE</div><div class="sub">AGENT PLATFORM</div></div>
+    <div class="brand-logo">
+      <div class="logo-grid">
+        <div class="di" aria-hidden="true">D</div>
+        <div class="scope-wrap">
+          <div class="scope">ISCOPE</div>
+          <div class="agent">AGENT</div>
+        </div>
+      </div>
+      <div class="rule"></div>
     </div>
     <div class="nav-h">Workspace</div>
     <div class="nav-item active" data-view="scan"><span class="ic">⌖</span> Scan <span class="badge">Active</span></div>
@@ -257,14 +334,22 @@
 
       <!-- HERO -->
       <div class="hero" id="hero">
-        <div class="pill">⚡ THREAT INTELLIGENCE</div>
-        <h1>Command center for credential <span class="hl">leak detection</span>.</h1>
+        <h1>Command center for <span class="hl">credential leak</span> detection.</h1>
         <p>Scan any domain for stealer logs and credential leaks, or query data we've already indexed across our threat sources.</p>
         <div class="actions">
           <div class="act" data-act="scan" data-dom="dewa.gov.ae"><div class="k">SCAN DOMAIN</div><div class="v">dewa.gov.ae</div><span class="go">→</span></div>
           <div class="act" data-act="scan" data-dom="rta.ae"><div class="k">SCAN DOMAIN</div><div class="v">rta.ae</div><span class="go">→</span></div>
           <div class="act" data-act="fresh" data-dom="gmail.com"><div class="k">FORCE RE-SCAN</div><div class="v">gmail.com</div><span class="go">→</span></div>
           <div class="act" data-act="query" data-dom="credentials"><div class="k">QUERY INDEXED DATA</div><div class="v">credentials</div><span class="go">→</span></div>
+        </div>
+        <div class="layout-adj">
+          <span>Layout</span>
+          <button id="layoutCompact">Compact</button>
+          <button id="layoutNormal">Normal</button>
+          <button id="layoutLarge">Large</button>
+          <span>Padding</span>
+          <input id="heroPaddingRange" type="range" min="24" max="72" value="44">
+          <button id="heroPaddingApply">Apply</button>
         </div>
       </div>
 
@@ -285,6 +370,7 @@
       <input id="msgInput" placeholder="Scan a domain or ask about indexed data..." autocomplete="off">
       <button class="send" id="sendBtn">Send</button>
     </div>
+    <div class="app-footer">Made with <span class="brand-flag" aria-label="UAE">🇦🇪</span> <span class="brand-pride">Pride</span>, Powered by <span class="brand-ui">DEWA</span></div>
   </main>
 </div>
 <div class="toast" id="toast"></div>
@@ -302,7 +388,11 @@ let recentScans = [];
 let scanning = false;
 
 function timestamp(){const d=new Date();return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
-function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function esc(s){
+  if (s === null || s === undefined) return '';
+  const t = typeof s === 'number' || typeof s === 'boolean' ? String(s) : s;
+  return String(t).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"').replace(/'/g,String.fromCharCode(39));
+}
 function scrollBottom(){chatInner.scrollTop = chatInner.scrollHeight}
 function showToast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
 function showTyping(){const d=document.createElement('div');d.className='msg';d.id='typingMsg';
@@ -384,7 +474,8 @@ async function apiChat(text){
 async function send(text){
   text=(text||input.value).trim();
   if(!text||scanning) return;
-  sendBtn.disabled=true; scanning=true; $('#liveBtn').classList.add('active');
+  sendBtn.disabled=true; scanning=true;
+  disableActions(true);
   addMessage('user',text);
   messageHistory.push({role:'user',content:text});
   input.value=''; input.style.height='auto';
@@ -397,7 +488,7 @@ async function send(text){
     addMessage('ai','Connection error — is the server running on port 8080?');
     scanning=false; sendBtn.disabled=false; $('#liveBtn').classList.remove('active'); return;
   }
-  hideTyping(); $('#liveBtn').classList.remove('active'); scanning=false; sendBtn.disabled=false;
+  hideTyping(); $('#liveBtn').classList.remove('active'); scanning=false; sendBtn.disabled=false; disableActions(false);
   if(data.status==='ok'){
     const isScan=data.is_scan_result;
     const level=data.threat_level||'low';
@@ -415,6 +506,13 @@ async function send(text){
     addMessage('ai','Something went wrong: '+(data.error||'unknown'));
   }
   if(messageHistory.length>50) messageHistory=messageHistory.slice(-50);
+}
+
+function disableActions(disabled){
+  document.querySelectorAll('.act').forEach(a => {
+    if(disabled) a.classList.add('scanning');
+    else a.classList.remove('scanning');
+  });
 }
 
 // ── Recent scans (client-side from session) ──
@@ -444,7 +542,7 @@ async function loadStats(){
     const db=st.database||{};
     const sem=st.semantic||{};
     $('#stRecords').textContent = (db.total_records||0).toLocaleString();
-    $('#stRecordsTr').textContent = '+'+((db.database&&db.database.total_records)?'indexed':'0')+' total';
+    $('#stRecordsTr').textContent = db.total_records ? 'updated' : 'no data';
     $('#stSources').textContent = (sr.sources||[]).filter(s=>s.enabled).length;
     $('#stDomains').textContent = (sem.domains||0).toLocaleString();
     $('#stQueries').textContent = (sem.queries_logged||0).toLocaleString();
@@ -454,11 +552,28 @@ async function loadRecentFromHistory(){
   try{
     const hs=await fetch('/api/history').then(r=>r.json());
     const items=(hs.history||[]).slice(0,8);
-    // derive domains from queries like "scan dewa.gov.ae"
-    const dm=items.map(h=>{const m=(h.query||'').match(/([a-z0-9.-]+\.[a-z]{2,})/i);return m?m[1]:null;}).filter(Boolean);
-    const uniq=[...new Set(dm)].slice(0,4);
+    const now = Date.now();
+    const dm = items.map(h=>{
+      const m=(h.query||'').match(/([a-z0-9.-]+\\.[a-z]{2,})/i);
+      if(!m) return null;
+      let rel = 'just now';
+      try{
+        const t = new Date(h.created_at || Date.now()).getTime();
+        const diff = Math.max(0, Math.floor((now - t) / 1000));
+        if(diff < 60) rel = diff + 's ago';
+        else if(diff < 3600) rel = Math.floor(diff/60) + 'm ago';
+        else if(diff < 86400) rel = Math.floor(diff/3600) + 'h ago';
+        else rel = Math.floor(diff/86400) + 'd ago';
+      }catch(e){}
+      return {domain:m[1], level:'low', tm:rel};
+    }).filter(Boolean);
+    const uniq=[];
+    const seen=new Set();
+    for(const d of dm){
+      if(!seen.has(d.domain)){ seen.add(d.domain); uniq.push(d); }
+    }
     if(uniq.length){
-      recentScans = uniq.map((d,i)=>({domain:d, level:'low', tm:(i===0?'2m':(i===1?'8m':(i===2?'41m':'1h'))+' ago')}));
+      recentScans = uniq.slice(0,4);
       renderRecent();
     }
   }catch(e){}
@@ -493,6 +608,30 @@ $('#viewAll').addEventListener('click',()=>{document.querySelector('[data-view="
 renderRecent();
 loadStats();
 loadRecentFromHistory();
+
+(function(){
+  const hero = document.getElementById('hero');
+  const layoutBtns = {
+    compact: document.getElementById('layoutCompact'),
+    normal: document.getElementById('layoutNormal'),
+    large: document.getElementById('layoutLarge'),
+  };
+  const paddingRange = document.getElementById('heroPaddingRange');
+  const paddingApply = document.getElementById('heroPaddingApply');
+
+  function setLayout(size){
+    hero.classList.remove('compact','large');
+    if(size && size !== 'normal') hero.classList.add(size);
+  }
+  layoutBtns.compact.addEventListener('click', ()=> setLayout('compact'));
+  layoutBtns.normal.addEventListener('click', ()=> setLayout('normal'));
+  layoutBtns.large.addEventListener('click', ()=> setLayout('large'));
+
+  paddingApply.addEventListener('click', ()=>{
+    const px = Math.max(24, Math.min(72, parseInt(paddingRange.value, 10) || 44));
+    hero.style.padding = `${px}px ${Math.round(px*0.9)}px`;
+  });
+})();
 </script>
 </body>
 </html>
